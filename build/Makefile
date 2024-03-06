@@ -1,5 +1,7 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -O2 -g
+CXXFLAGS = -Wall -Wextra -O2 -g -std=c++14
+LDFLAGS =
+GTEST_FLAGS = -lgtest -lgtest_main -pthread
 
 # Object files
 CLIENT_OBJS = Client.o
@@ -24,7 +26,7 @@ $(SERVER_EXE): $(SERVER_OBJS) main_server.o
 test: $(TEST_EXE)
 
 $(TEST_EXE): $(TEST_OBJS) $(CLIENT_OBJS) $(SERVER_OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -lpthread
+	$(CXX) $(LDFLAGS) -o $@ $^ $(GTEST_FLAGS)
 
 %.o: %.cpp %.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
