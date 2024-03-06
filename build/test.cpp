@@ -45,6 +45,31 @@ TEST_F(ClientServerTest, ClientServerCommunication) {
     EXPECT_STREQ(response1, "world");
 }
 
+TEST_F(ClientServerTest, MultipleMessages) {
+    Client client(1234, "127.0.0.1");
+
+    const int NUM_MESSAGES = 5;
+    const char* messages[NUM_MESSAGES] = {
+        "Message 1",
+        "Message 2",
+        "Message 3",
+        "Message 4",
+        "Message 5"
+    };
+
+    char response[64] = {};
+
+    for (int i = 0; i < NUM_MESSAGES; ++i) {
+        client.sendMessage(messages[i]);
+
+        // Assuming the server echoes the message back
+        client.receiveMessage(response, sizeof(response));
+        std::cout << "Received: " << response << std::endl;
+        EXPECT_STREQ(response, messages[i]) << "Failed at message index " << i;
+    }
+}
+
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
