@@ -2,13 +2,10 @@
 
 int main() {
     Client client(1234, "127.0.0.1");
-
-    char msg[] = "msg1test";
-    client.sendMessage(msg);
-
-    char rbuf[64] = {};
-    client.receiveMessage(rbuf, sizeof(rbuf));
-    printf("server says: %s\n", rbuf);
-
+    const char* msg = "msg1test";
+    int32_t err = client.query(client.getFd(), msg);
+    if (err) {
+        printf("Error sending query\n");
+    }
     return 0;
 }
