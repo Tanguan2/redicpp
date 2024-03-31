@@ -1,7 +1,7 @@
 #include "Server.h"
 
 
-Server::Server(uint16_t port) {
+Server::Server(uint16_t port) : running(true) {
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         die("socket()");
@@ -31,15 +31,20 @@ Server::~Server() {
 }
 
 void Server::run() {
-    while (true) {
+    while (running) {
         struct sockaddr_in client_addr = {};
         socklen_t socklen = sizeof(client_addr);
         int connfd = accept(fd, (struct sockaddr *)&client_addr, &socklen);
         if (connfd < 0) {
             continue;   // error
         }
-
-        handleConnection(connfd);
+        // // handle multiple requests
+        while (true) {
+            int32_t err = oneRequest(connfd);
+            if (err) {
+                break;
+            }
+        }
         close(connfd);
     }
 }
@@ -65,4 +70,75 @@ void Server::handleConnection(int connfd) {
 
 void Server::msg(const char *msg) {
     fprintf(stderr, "%s\n", msg);
+}
+
+int32_t Server::read_full(int fd, char *buf, size_t n) {
+    while (n > 0) {
+        ssize_t rv = read(fd, buf, n);
+        if (rv <= 0) {
+            return -1; // error
+        }
+        n -= (size_t)rv;
+        buf += rv;
+    }
+    return 0;
+}
+
+int32_t Server::write_all(int fd, const char *buf, size_t n) {
+    while (n > 0) {
+        ssize_t rv = write(fd, buf, n);
+        if (rv <= 0) {
+            return -1; // error
+        }
+        n -= (size_t)rv;
+        buf += rv;
+    }
+    return 0;
+}
+
+const size_t maxMsgLen = 8192;
+
+int32_t Server::oneRequest(int connfd) {
+    // 4 bytes header
+    char rbuf[4 + maxMsgLen + 1];
+    errno = 0;
+    int32_t err = read_full(connfd, rbuf, 4);
+    if (err) {
+        if (errno == 0) {
+            msg("EOF");
+        } else {
+            msg("read() error");
+        }
+        return err;
+    }
+    uint32_t len = 0;
+    memcpy(&len, rbuf, 4); // assume little endian
+    if (len > maxMsgLen) {
+        msg("message too long");
+        return -1;
+    }
+
+    // request body
+    err = read_full(connfd, &rbuf[4], len);
+    if (err) {
+        msg("read() error");
+        return err;
+    }
+    
+    // BALL
+    rbuf[4 + len] = '\0';
+    std::cout << "client says: " << &rbuf[4] << std::endl;
+    // REPLY
+    const char reply[] = "world";
+    char wbuf[4 + sizeof(reply)];
+    len = (uint32_t)strlen(reply);
+    memcpy(wbuf, &len, 4); // assume little endian
+    memcpy(&wbuf[4], reply, len);
+    return write_all(connfd, wbuf, 4 + len);
+}
+
+void Server::stop() {
+    std::cout << "stopping" << std::endl;
+    running = false;
+    close(fd);
 }
