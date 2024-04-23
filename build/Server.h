@@ -15,6 +15,9 @@
 #include <netinet/ip.h>
 #include <vector>
 #include <iostream>
+#include <mutex>
+#include <cstring>
+#include <cerrno>
 
 enum {
     STATE_REQ = 0,
@@ -57,6 +60,7 @@ private:
     static int32_t write_all(int fd, const char *buf, size_t n);
     static int32_t oneRequest(int connfd);
     static void fd_set_nb(int fd);
+    static std::mutex accept_mutex;
 };
 
 #endif // SERVER_H

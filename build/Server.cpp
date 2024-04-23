@@ -198,9 +198,12 @@ void Server::connPut(std::vector<Conn*> &fd2conn, struct Conn *conn) {
     fd2conn[conn->fd] = conn;
 }
 
+std::mutex Server::accept_mutex;
+
 int32_t Server::acceptNewConn(std::vector<Conn*> &fd2conn, int fd) {
     struct sockaddr_in client_addr = {};
     socklen_t socklen = sizeof(client_addr);
+    std::lock_guard<std::mutex> guard(accept_mutex);
     int connfd = accept(fd, (struct sockaddr *)&client_addr, &socklen);
     if (connfd < 0) {
         msg("accept() error");
