@@ -39,13 +39,10 @@ TEST_F(ClientServerTest, ClientServerCommunication) {
 
     int32_t result1 = client1.sendRequest(client1.getFd(), message1.c_str());
     result1 = client1.readRequest(client1.getFd());
-    client1.closeConnection();
     int32_t result2 = client2.sendRequest(client2.getFd(), message2.c_str());
     result2 = client2.readRequest(client2.getFd());
-    client2.closeConnection();
     int32_t result3 = client3.sendRequest(client3.getFd(), message3.c_str());
     result3 = client3.readRequest(client3.getFd());
-    client3.closeConnection();
 
     // Check if the queries were successful
     EXPECT_EQ(result1, 0) << "Query failed with error code " << result1;
@@ -64,8 +61,10 @@ TEST_F(ClientServerTest, MultipleConcurrentClients) {
         client_threads.emplace_back([i] {
             Client client(1234, "127.0.0.1");
             std::string message = "hello" + std::to_string(i);
-            client.sendRequest(client.getFd(), message.c_str());
-            client.readRequest(client.getFd());
+            int32_t result = client.sendRequest(client.getFd(), message.c_str());
+            EXPECT_EQ(result, 0) << "Query failed with error code " << result;
+            result = client.readRequest(client.getFd());
+            EXPECT_EQ(result, 0) << "Query failed with error code " << result;
         });
     }
     for (auto& t : client_threads) {
@@ -78,6 +77,7 @@ TEST_F(ClientServerTest, LargeMessage) {
     Client client(1234, "127.0.0.1");
     std::string large_message(4096, 'A'); // Create a large message
     int32_t result = client.sendRequest(client.getFd(), large_message.c_str());
+    EXPECT_EQ(result, 0) << "Query failed with error code " << result;
     result = client.readRequest(client.getFd());
     EXPECT_EQ(result, 0) << "Query failed with error code " << result;
 }
