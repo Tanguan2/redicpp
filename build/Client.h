@@ -18,10 +18,7 @@ public:
     Client(uint16_t port, const char* ip_address);
     ~Client();
     int getFd() const;
-    void sendMessage(const char* msg);
-    void receiveMessage(char* buffer, size_t buffer_size);
     void closeConnection();
-    static int32_t query(int fd, const char *txt);
     static int32_t sendRequest(int fd, const char *txt);
     static int32_t readRequest(int fd);
 
