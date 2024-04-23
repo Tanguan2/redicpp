@@ -44,7 +44,7 @@ public:
     int run();
     void stop();
     static void connPut(std::vector<Conn*> &fd2conn, struct Conn *conn);
-    static int32_t acceptNewConn(std::vector<Conn*> &fd2conn, int fd);
+    static int32_t acceptNewConn(std::vector<Conn*> &fd2conn, int fd, int kq);
     static void stateRequest(Conn *conn);
     static void stateResponse(Conn *conn);
     static bool tryOneRequest(Conn *conn);
