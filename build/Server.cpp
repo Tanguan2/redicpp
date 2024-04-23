@@ -206,6 +206,7 @@ int32_t Server::acceptNewConn(std::vector<Conn*> &fd2conn, int fd) {
     std::lock_guard<std::mutex> guard(accept_mutex);
     int connfd = accept(fd, (struct sockaddr *)&client_addr, &socklen);
     if (connfd < 0) {
+        // std::cerr << "accept() failed with errno " << errno << " (" << strerror(errno) << ")" << std::endl;
         msg("accept() error");
         return -1;
     }

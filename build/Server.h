@@ -18,6 +18,8 @@
 #include <mutex>
 #include <cstring>
 #include <cerrno>
+#include <sys/event.h>
+#include <sys/time.h>
 
 enum {
     STATE_REQ = 0,
