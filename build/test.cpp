@@ -37,11 +37,14 @@ TEST_F(ClientServerTest, ClientServerCommunication) {
     std::string message2 = "hello2";
     std::string message3 = "hello3";
 
-    int32_t result1 = client1.query(client1.getFd(), message1.c_str());
+    int32_t result1 = client1.sendRequest(client1.getFd(), message1.c_str());
+    result1 = client1.readRequest(client1.getFd());
     client1.closeConnection();
-    int32_t result2 = client2.query(client2.getFd(), message2.c_str());
+    int32_t result2 = client2.sendRequest(client2.getFd(), message2.c_str());
+    result2 = client2.readRequest(client2.getFd());
     client2.closeConnection();
-    int32_t result3 = client3.query(client3.getFd(), message3.c_str());
+    int32_t result3 = client3.sendRequest(client3.getFd(), message3.c_str());
+    result3 = client3.readRequest(client3.getFd());
     client3.closeConnection();
 
     // Check if the queries were successful
@@ -61,7 +64,8 @@ TEST_F(ClientServerTest, MultipleConcurrentClients) {
         client_threads.emplace_back([i] {
             Client client(1234, "127.0.0.1");
             std::string message = "hello" + std::to_string(i);
-            client.query(client.getFd(), message.c_str());
+            client.sendRequest(client.getFd(), message.c_str());
+            client.readRequest(client.getFd());
         });
     }
     for (auto& t : client_threads) {
@@ -72,16 +76,17 @@ TEST_F(ClientServerTest, MultipleConcurrentClients) {
 // large message test
 TEST_F(ClientServerTest, LargeMessage) {
     Client client(1234, "127.0.0.1");
-    std::string large_message(8192, 'A'); // Create a large message
-    int32_t result = client.query(client.getFd(), large_message.c_str());
+    std::string large_message(4096, 'A'); // Create a large message
+    int32_t result = client.sendRequest(client.getFd(), large_message.c_str());
+    result = client.readRequest(client.getFd());
     EXPECT_EQ(result, 0) << "Query failed with error code " << result;
 }
 
 // invalid message length test
 TEST_F(ClientServerTest, InvalidMessageLength) {
     Client client(1234, "127.0.0.1");
-    std::string long_message(8193, 'B'); // Create a message longer than maxMsgLen
-    int32_t result = client.query(client.getFd(), long_message.c_str());
+    std::string long_message(4097, 'B'); // Create a message longer than maxMsgLen
+    int32_t result = client.sendRequest(client.getFd(), long_message.c_str());
     EXPECT_NE(result, 0) << "Server should reject messages longer than maxMsgLen";
 }
 

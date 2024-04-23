@@ -78,6 +78,7 @@ int32_t Client::read_full(int fd, char *buf, size_t n) {
             return -1; // error
         }
         // Update the remaining bytes to read and the buffer pointer
+        assert((size_t)rv <= n);
         n -= (size_t)rv;
         buf += rv;
     }
@@ -102,6 +103,7 @@ int32_t Client::write_all(int fd, const char *buf, size_t n) {
             return -1; // error
         }
         // Update the remaining bytes to write and the buffer pointer
+        assert((size_t)rv <= n);
         n -= (size_t)rv;
         buf += rv;
     }
@@ -110,7 +112,7 @@ int32_t Client::write_all(int fd, const char *buf, size_t n) {
 }
 
 // Maximum message length
-const size_t maxMsgLen = 8192;
+const size_t maxMsgLen = 4096;
 
 // Send a query to the server and receive a response
 int32_t Client::query(int fd, const char *txt) {
@@ -162,6 +164,59 @@ int32_t Client::query(int fd, const char *txt) {
     rbuf[4 + len] = '\0';
     // Print the received response
     std::cout << "Received: " << rbuf + 4 << std::endl;
+}
+
+int32_t Client::sendRequest(int fd, const char *txt) {
+    // Get the length of the request text
+    uint32_t len = (uint32_t)strlen(txt);
+    // Check if the request is too long
+    if (len > maxMsgLen) {
+        return -1;
+    }
+    // Create a write buffer to hold the length and request text
+    char wbuf[4 + maxMsgLen];
+    // Copy the length to the first 4 bytes of the write buffer
+    memcpy(wbuf, &len, 4);
+    // Copy the request text to the write buffer after the length
+    memcpy(&wbuf[4], txt, len);
+    return write_all(fd, wbuf, 4 + len);
+}
+
+int32_t Client::readRequest(int fd) {
+    // Create a read buffer to hold the request
+    char rbuf[4 + maxMsgLen + 1];
+    // Reset errno
+    errno = 0;
+    // Read the request length from the file descriptor
+    int32_t err = read_full(fd, rbuf, 4);
+    if (err) {
+        // Handle errors
+        if (errno == 0) {
+            msg("EOF");
+        } else {
+            msg("read() error");
+        }
+        return err;
+    }
+    // Get the request length from the read buffer
+    uint32_t len = 0;
+    memcpy(&len, rbuf, 4);
+    // Check if the request is too long
+    if (len > maxMsgLen) {
+        msg("message too long");
+        return -1;
+    }
+    // Read the request body from the file descriptor
+    err = read_full(fd, &rbuf[4], len);
+    if (err) {
+        msg("read() error");
+        return err;
+    }
+    // Null-terminate the request
+    rbuf[4 + len] = '\0';
+    // Print the received request
+    std::cout << "Received: " << rbuf + 4 << std::endl;
+    return 0;
 }
 
 // Close the client connection

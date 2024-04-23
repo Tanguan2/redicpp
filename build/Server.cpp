@@ -111,7 +111,7 @@ int32_t Server::write_all(int fd, const char *buf, size_t n) {
 }
 
 // Maximum message length
-const size_t maxMsgLen = 8192;
+const size_t maxMsgLen = 4096;
 
 // Handle a single client request
 int32_t Server::oneRequest(int connfd) {
