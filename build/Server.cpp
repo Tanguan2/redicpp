@@ -40,47 +40,47 @@ Server::~Server() {
 int Server::run() {
     int kq = kqueue();
     if (kq == -1) {
-        std::cerr << "Failed to create kqueue\n";
+        // std::cerr << "Failed to create kqueue\n";
         die("kqueue()");
     }
-    std::cerr << "kqueue created successfully\n";
+    // std::cerr << "kqueue created successfully\n";
 
     struct kevent changeList[2];
     EV_SET(&changeList[0], fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
     if (kevent(kq, changeList, 1, NULL, 0, NULL) == -1) {
-        std::cerr << "Failed to add listening socket to kqueue\n";
+        // std::cerr << "Failed to add listening socket to kqueue\n";
         die("kevent()");
     }
-    std::cerr << "Listening socket added to kqueue\n";
+    // std::cerr << "Listening socket added to kqueue\n";
 
     std::vector<Conn *> fd2conn;
     fd_set_nb(fd);
-    std::cerr << "Server is now non-blocking and ready to accept connections\n";
+    // std::cerr << "Server is now non-blocking and ready to accept connections\n";
 
     while (running) {
         struct kevent eventList[32];
         int numEvents = kevent(kq, NULL, 0, eventList, 32, NULL);
         if (numEvents == -1) {
-            std::cerr << "Error during kevent wait\n";
+            // std::cerr << "Error during kevent wait\n";
             die("kevent()");
         }
-        std::cerr << "Processed " << numEvents << " events\n";
+        // std::cerr << "Processed " << numEvents << " events\n";
 
         for (int i = 0; i < numEvents; ++i) {
             int eventFd = eventList[i].ident;
             int eventFilter = eventList[i].filter;
 
             if (eventFd == fd && eventFilter == EVFILT_READ) {
-                std::cerr << "Accepting new connection\n";
+                // std::cerr << "Accepting new connection\n";
                 acceptNewConn(fd2conn, fd, kq);
             } else {
                 Conn *conn = fd2conn[eventFd];
                 if (conn) {
-                    std::cerr << "Processing connection on fd " << eventFd << "\n";
+                    // std::cerr << "Processing connection on fd " << eventFd << "\n";
                     if (eventFilter == EVFILT_READ || eventFilter == EVFILT_WRITE) {
                         connectionIO(conn);
                         if (conn->state == STATE_DONE) {
-                            std::cerr << "Connection on fd " << conn->fd << " is done, closing\n";
+                            // std::cerr << "Connection on fd " << conn->fd << " is done, closing\n";
                             fd2conn[conn->fd] = NULL;
                             EV_SET(&changeList[0], conn->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
                             EV_SET(&changeList[1], conn->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
@@ -96,12 +96,12 @@ int Server::run() {
                         }
                     }
                 } else {
-                    std::cerr << "No connection object found for fd " << eventFd << "\n";
+                    // std::cerr << "No connection object found for fd " << eventFd << "\n";
                 }
             }
         }
     }
-    std::cerr << "Server shutting down, closing kqueue\n";
+    // std::cerr << "Server shutting down, closing kqueue\n";
     (void)close(kq);
     return 0;
 }

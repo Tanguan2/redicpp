@@ -4,4 +4,4 @@
 make test
 
 # Run the server executable in the background
-./test
+./test > output.txt
