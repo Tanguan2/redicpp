@@ -39,5 +39,4 @@ main_server.o: main_server.cpp
 
 clean:
 	rm -f $(CLIENT_EXE) $(SERVER_EXE) $(TEST_EXE) *.o
-	rm output.txt
-	rm server.log
+	rm test.out && rm server.log
