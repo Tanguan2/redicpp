@@ -1,4 +1,3 @@
-#include <iostream>
 #include <thread>
 #include "Client.h"
 #include "Server.h"

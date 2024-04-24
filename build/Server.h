@@ -1,28 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netinet/ip.h>
-#include <vector>
-#include <iostream>
-#include <mutex>
-#include <cstring>
-#include <cerrno>
-#include <sys/event.h>
-#include <sys/time.h>
-#include <fstream>
-#include <chrono>
-#include <ctime>
+#include "Dependencies.h"
 
 enum {
     STATE_REQ = 0,
