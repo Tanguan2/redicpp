@@ -20,6 +20,9 @@
 #include <cerrno>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <fstream>
+#include <chrono>
+#include <ctime>
 
 enum {
     STATE_REQ = 0,
@@ -51,6 +54,7 @@ public:
     static bool tryFillRbuf(Conn *conn);
     static bool tryFlushWbuf(Conn *conn);
     static void connectionIO(Conn *conn);
+    void logRequest(const Conn *conn, const std::string &clientMsg);
 
 private:
     int fd;
@@ -63,6 +67,8 @@ private:
     static int32_t oneRequest(int connfd);
     static void fd_set_nb(int fd);
     static std::mutex accept_mutex;
+    static std::mutex log_mutex;
+    static std::ofstream logfile;
 };
 
 #endif // SERVER_H

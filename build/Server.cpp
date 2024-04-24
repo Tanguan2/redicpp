@@ -1,7 +1,12 @@
 #include "Server.h"
 
 // Server class constructor, sets up the server socket
+
+std::ofstream Server::logfile;
+std::mutex Server::log_mutex;
+
 Server::Server(uint16_t port) : running(true) {
+    logfile.open("server.log", std::ios::app);
     // Create a socket file descriptor
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -33,6 +38,7 @@ Server::Server(uint16_t port) : running(true) {
 
 // Server class destructor, closes the socket file descriptor
 Server::~Server() {
+    logfile.close();
     close(fd);
 }
 
@@ -85,6 +91,8 @@ int Server::run() {
                             EV_SET(&changeList[0], conn->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
                             EV_SET(&changeList[1], conn->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
                             kevent(kq, changeList, 2, NULL, 0, NULL);
+                            std::string clientMsg = std::string((char *)conn->rbuf + 4);
+                            logRequest(conn, clientMsg);
                             (void)close(conn->fd);
                             delete conn;
                         } else if (conn->state == STATE_REQ) {
@@ -104,6 +112,15 @@ int Server::run() {
     // std::cerr << "Server shutting down, closing kqueue\n";
     (void)close(kq);
     return 0;
+}
+
+void Server::logRequest(const Conn *conn, const std::string &clientMsg) {
+    std::lock_guard<std::mutex> guard(log_mutex);
+    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    logfile << std::ctime(&now) << "Client message: " << clientMsg << std::endl;
+    logfile << "Server response: " << conn->wbuf + 4 << std::endl;
+    logfile << std::endl;
+    logfile.flush();
 }
 
 
