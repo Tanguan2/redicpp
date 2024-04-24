@@ -60,11 +60,9 @@ private:
     int fd;
     bool running;
     static void die(const char *msg);
-    static void handleConnection(int connfd);
     static void msg(const char *msg);
     static int32_t read_full(int fd, char *buf, size_t n);
     static int32_t write_all(int fd, const char *buf, size_t n);
-    static int32_t oneRequest(int connfd);
     static void fd_set_nb(int fd);
     static std::mutex accept_mutex;
     static std::mutex log_mutex;
