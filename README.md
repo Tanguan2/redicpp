@@ -4,6 +4,8 @@ This repository contains the source code for the Redicpp client and server appli
 
 ## Prerequisites
 
+For now, this project is developed on MacOS. This is due to how we're handling polling (for MacOS, I have to use kqueue because epoll isn't implemented U_U). I'll move to multi-platform cmake with epoll for Linux users in the future, or you can take it upon yourself to implement this for me and submit a PR.
+
 Before building and running this project, ensure you have the following installed:
 
 - CMake (minimum version 3.10)
