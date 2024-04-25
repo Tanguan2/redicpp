@@ -25,7 +25,7 @@ cd redicpp
 ```
 Once you have cloned the repository, simply run build.sh && cd build.
 Then, you can run the client, server, and test executables as you wish. Additionally, for testing, you can run the following:
-- make runClient for testing the client
-- make runServer for testing the server
-- make runTests for running all tests
+- make runClient (for testing the client)
+- make runServer (for testing the server)
+- make runTests (for running all tests)
 Happy coding !
