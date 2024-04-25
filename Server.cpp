@@ -238,17 +238,15 @@ bool Server::tryOneRequest(Conn *conn) {
     memcpy(&conn->wbuf[0], &len, 4);
     memcpy(&conn->wbuf[4], &conn->rbuf[4], len);
     conn->wbuf_size = 4 + len;
-
-    size_t rem = conn->rbuf_size - (4 + len);
-    if (rem) {
-        memmove(conn->rbuf, &conn->rbuf[4 + len], rem);
-    }
-    conn->rbuf_size = rem;
+    conn->rbuf_size -= (4 + len);
     stateResponse(conn);
     return (conn->state == STATE_REQ);
 }
 
 bool Server::tryFillRbuf(Conn *conn) {
+    if (conn->rbuf_size > 0) {
+        memmove(conn->rbuf, &conn->rbuf[conn->rbuf_size], conn->rbuf_size);
+    }
     assert(conn->rbuf_size < sizeof(conn->rbuf));
     ssize_t rv = 0;
     do {
