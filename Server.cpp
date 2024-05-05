@@ -165,8 +165,6 @@ int32_t Server::write_all(int fd, const char *buf, size_t n) {
 // Maximum message length
 const size_t maxMsgLen = 4096;
 
-const size_t maxArgsLen = 16;
-
 void Server::fd_set_nb(int fd) {
     errno = 0;
     int flags = fcntl(fd, F_GETFL, 0);
@@ -236,87 +234,13 @@ bool Server::tryOneRequest(Conn *conn) {
     if (4 + len > conn->rbuf_size) {
         return false;
     }
-    uint32_t rescode = 0, wlen = 0;
-    int32_t err = doRequest(
-        &conn->rbuf[4], len,
-        &rescode, &conn->wbuf[4 + 4], &wlen
-    );
-    if (err) {
-        conn->state = STATE_DONE;
-        return false;
-    }
-    wlen += 4;
+    std::cout << "Client says: " << conn->rbuf + 4 << std::endl;
     memcpy(&conn->wbuf[0], &len, 4);
     memcpy(&conn->wbuf[4], &conn->rbuf[4], len);
     conn->wbuf_size = 4 + len;
     conn->rbuf_size -= (4 + len);
     stateResponse(conn);
     return (conn->state == STATE_REQ);
-}
-
-int32_t Server::doRequest(const uint8_t *req, uint32_t reqlen, uint32_t *rescode, uint8_t *res, uint32_t *reslen) {
-    std::vector<std::string> cmd;
-    if (0 != parseRequest(req, reqlen, cmd)) {
-        msg("bad request.");
-        return -1;
-    }
-    if (cmd.size() == 2 && (cmd[0] == "get")) {
-        *rescode = doGet(cmd, res, reslen);
-    } else if (cmd.size() == 3 && (cmd[0] == "set")) {
-        *rescode = doSet(cmd, res, reslen);
-    } else if (cmd.size() == 2 && (cmd[0] == "del")) {
-        *rescode = doDel(cmd, res, reslen);
-    } else {
-        *rescode = RES_ERR;
-        const char *msg = "ERR unknown command";
-        strcpy((char *)res, msg);
-        *reslen = strlen(msg);
-        return 0;
-    }
-    return 0;
-}
-
-int32_t Server::parseRequest(const uint8_t *data, size_t len, std::vector<std::string> &tokens) {
-    if (len < 4) return -1;
-    uint32_t n = 0;
-    memcpy(&n, &data[0], 4);
-    if (n > maxArgsLen) return -1;
-    size_t pos = 4;
-    while (n--) {
-        if (pos + 4 > len) return -1;
-        uint32_t sz = 0;
-        memcpy(&sz, &data[pos], 4);
-        if (pos + 4 + sz > len) return -1;
-        tokens.push_back(std::string((char *)&data[pos + 4], sz));
-        pos += 4 + sz;
-    }
-    if (pos != len) return -1;
-    return 0;
-}
-
-uint32_t Server::doGet(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen) {
-    if (!gMap.count(tokens[1])) {
-        return RES_NX;
-    }
-    std::string &val = gMap[tokens[1]];
-    assert(val.size() <= maxMsgLen);
-    memcpy(res, val.data(), val.size());
-    *reslen = (uint32_t)val.size();
-    return RES_OK;
-}
-
-uint32_t Server::doSet(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen) {
-    (void)res;
-    (void)reslen;
-    gMap[tokens[1]] = tokens[2];
-    return RES_OK;
-}
-
-uint32_t Server::doDel(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen) {
-    (void)res;
-    (void)reslen;
-    gMap.erase(tokens[1]);
-    return RES_OK;
 }
 
 bool Server::tryFillRbuf(Conn *conn) {

@@ -9,7 +9,7 @@ public:
     ~Client();
     int getFd() const;
     void closeConnection();
-    static int32_t sendRequest(int fd, const std::vector<std::string> &tokens);
+    static int32_t sendRequest(int fd, const char *txt);
     static int32_t readRequest(int fd);
 
 private:

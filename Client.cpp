@@ -96,12 +96,9 @@ int32_t Client::write_all(int fd, const char *buf, size_t n) {
 // Maximum message length
 const size_t maxMsgLen = 4096;
 
-int32_t Client::sendRequest(int fd, const std::vector<std::string> &tokens) {
+int32_t Client::sendRequest(int fd, const char *txt) {
     // Get the length of the request text
-    uint32_t len = 4;
-    for (const auto &token : tokens) {
-        len += 4 + token.size();
-    }
+    uint32_t len = (uint32_t)strlen(txt);
     // Check if the request is too long
     if (len > maxMsgLen) {
         return -1;
@@ -110,16 +107,8 @@ int32_t Client::sendRequest(int fd, const std::vector<std::string> &tokens) {
     char wbuf[4 + maxMsgLen];
     // Copy the length to the first 4 bytes of the write buffer
     memcpy(wbuf, &len, 4);
-    uint32_t n = tokens.size();
-    memcpy(&wbuf[4], &n, 4);
-    size_t c = 8;
-    for (const auto &token : tokens) {
-        uint32_t m = (uint32_t)token.size();
-        memcpy(&wbuf[c], &m, 4);
-        memcpy(&wbuf[c + 4], token.data(), token.size());
-        c += 4 + token.size();
-    }
     // Copy the request text to the write buffer after the length
+    memcpy(&wbuf[4], txt, len);
     return write_all(fd, wbuf, 4 + len);
 }
 
@@ -157,13 +146,6 @@ int32_t Client::readRequest(int fd) {
     rbuf[4 + len] = '\0';
     // Print the received request
     std::cout << "Received: " << rbuf + 4 << std::endl;
-    uint32_t rescode = 0;
-    if (len < 4) {
-        msg("invalid request");
-        return -1;
-    }
-    memcpy(&rescode, &rbuf[4], 4);
-    printf("Server says: [%u] %.s\n", rescode, len - 4, &rbuf[8]);
     return 0;
 }
 
