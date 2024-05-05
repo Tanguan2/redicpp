@@ -9,6 +9,14 @@ enum {
     STATE_DONE = 2,
 };
 
+enum {
+    RES_OK = 0,
+    RES_ERR = 1,
+    RES_NX = 2,
+};
+
+static std::map<std::string, std::string> gMap;
+
 struct Conn {
     int fd = -1;
     uint32_t state = 0;
@@ -30,6 +38,11 @@ public:
     static void stateRequest(Conn *conn);
     static void stateResponse(Conn *conn);
     static bool tryOneRequest(Conn *conn);
+    static int32_t doRequest(const uint8_t *req, uint32_t reqlen, uint32_t *rescode, uint8_t *res, uint32_t *reslen);
+    static int32_t parseRequest(const uint8_t *data, size_t len, std::vector<std::string> &tokens);
+    static uint32_t doGet(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen);
+    static uint32_t doSet(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen);
+    static uint32_t doDel(const std::vector<std::string> &tokens, uint8_t *res, uint32_t *reslen);
     static bool tryFillRbuf(Conn *conn);
     static bool tryFlushWbuf(Conn *conn);
     static void connectionIO(Conn *conn);
