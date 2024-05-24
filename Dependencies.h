@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include <fstream>
 #include <chrono>
+#include <cassert>
 #include <ctime>
 #include <thread>
 #include <map>

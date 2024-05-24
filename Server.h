@@ -27,6 +27,12 @@ public:
     void stop();
     static void connPut(std::vector<Conn*> &fd2conn, struct Conn *conn);
     static int32_t acceptNewConn(std::vector<Conn*> &fd2conn, int fd);
+    static int32_t parse_req(const uint8_t *data, size_t len, std::vector<std::string> &out);
+    static uint32_t do_get(const std::vector<std::string> &cmd, uint8_t *res, uint32_t *reslen);
+    static uint32_t do_set(const std::vector<std::string> &cmd, uint8_t *res, uint32_t *reslen);
+    static uint32_t do_del(const std::vector<std::string> &cmd, uint8_t *res, uint32_t *reslen);
+    static bool cmd_is(const std::string &word, const char *cmd);
+    static int32_t do_request(const uint8_t *req, uint32_t reqlen, uint32_t *rescode, uint8_t *res, uint32_t *reslen);
     static void stateRequest(Conn *conn);
     static void stateResponse(Conn *conn);
     static bool tryOneRequest(Conn *conn);
