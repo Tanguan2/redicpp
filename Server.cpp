@@ -1,12 +1,7 @@
 #include "Server.h"
 
 // Server class constructor, sets up the server socket
-
-std::ofstream Server::logfile;
-std::mutex Server::log_mutex;
-
 Server::Server(uint16_t port) : running(true) {
-    logfile.open("server.log", std::ios::app);
     // Create a socket file descriptor
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -38,91 +33,52 @@ Server::Server(uint16_t port) : running(true) {
 
 // Server class destructor, closes the socket file descriptor
 Server::~Server() {
-    logfile.close();
     close(fd);
 }
 
 // Run the server, accepting and handling incoming connections
 int Server::run() {
-    int kq = kqueue();
-    if (kq == -1) {
-        // std::cerr << "Failed to create kqueue\n";
-        die("kqueue()");
-    }
-    // std::cerr << "kqueue created successfully\n";
-
-    struct kevent changeList[2];
-    EV_SET(&changeList[0], fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-    if (kevent(kq, changeList, 1, NULL, 0, NULL) == -1) {
-        // std::cerr << "Failed to add listening socket to kqueue\n";
-        die("kevent()");
-    }
-    // std::cerr << "Listening socket added to kqueue\n";
-
-    std::vector<Conn *> fd2conn;
-    fd_set_nb(fd);
-    // std::cerr << "Server is now non-blocking and ready to accept connections\n";
-
     while (running) {
-        struct kevent eventList[32];
-        int numEvents = kevent(kq, NULL, 0, eventList, 32, NULL);
-        if (numEvents == -1) {
-            // std::cerr << "Error during kevent wait\n";
-            die("kevent()");
-        }
-        // std::cerr << "Processed " << numEvents << " events\n";
-
-        for (int i = 0; i < numEvents; ++i) {
-            int eventFd = eventList[i].ident;
-            int eventFilter = eventList[i].filter;
-
-            if (eventFd == fd && eventFilter == EVFILT_READ) {
-                // std::cerr << "Accepting new connection\n";
-                acceptNewConn(fd2conn, fd, kq);
-            } else {
-                Conn *conn = fd2conn[eventFd];
-                if (conn) {
-                    // std::cerr << "Processing connection on fd " << eventFd << "\n";
-                    if (eventFilter == EVFILT_READ || eventFilter == EVFILT_WRITE) {
-                        connectionIO(conn);
-                        if (conn->state == STATE_DONE) {
-                            // std::cerr << "Connection on fd " << conn->fd << " is done, closing\n";
-                            fd2conn[conn->fd] = NULL;
-                            EV_SET(&changeList[0], conn->fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-                            EV_SET(&changeList[1], conn->fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-                            kevent(kq, changeList, 2, NULL, 0, NULL);
-                            std::string clientMsg = std::string((char *)conn->rbuf + 4);
-                            logRequest(conn, clientMsg);
-                            (void)close(conn->fd);
-                            delete conn;
-                        } else if (conn->state == STATE_REQ) {
-                            EV_SET(&changeList[0], conn->fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-                            kevent(kq, changeList, 1, NULL, 0, NULL);
-                        } else if (conn->state == STATE_RESP) {
-                            EV_SET(&changeList[0], conn->fd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-                            kevent(kq, changeList, 1, NULL, 0, NULL);
-                        }
-                    }
-                } else {
-                    // std::cerr << "No connection object found for fd " << eventFd << "\n";
+        std::vector<Conn *> fd2conn;
+        fd_set_nb(fd);
+        std::vector<struct pollfd> pollArgs;
+        while (true) {
+            pollArgs.clear();
+            struct pollfd pfd = {fd, POLLIN, 0};
+            pollArgs.push_back(pfd);
+            for (Conn *conn: fd2conn) {
+                if (!conn) {
+                    continue;
                 }
+                struct pollfd pfd = {};
+                pfd.fd = conn->fd;
+                pfd.events = (conn->state == STATE_REQ) ? POLLIN : POLLOUT;
+                pfd.events |= POLLERR;
+                pollArgs.push_back(pfd);
+            }
+            int rv = poll(pollArgs.data(), (nfds_t)pollArgs.size(), 10000);
+            if (rv < 0) {
+                die("poll()");
+            }
+            for (size_t i = 1; i < pollArgs.size(); i++) {
+                if (pollArgs[i].revents) {
+                    Conn *conn = fd2conn[pollArgs[i].fd];
+                    connectionIO(conn);
+                    if (conn->state == STATE_DONE) {
+                        fd2conn[conn->fd] = NULL;
+                        (void)close(conn->fd);
+                        delete conn;
+                    }
+                }
+            }
+
+            if (pollArgs[0].revents) {
+                (void)acceptNewConn(fd2conn, fd);
             }
         }
     }
-    // std::cerr << "Server shutting down, closing kqueue\n";
-    (void)close(kq);
     return 0;
 }
-
-void Server::logRequest(const Conn *conn, const std::string &clientMsg) {
-    std::lock_guard<std::mutex> guard(log_mutex);
-    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    logfile << std::ctime(&now) << "Client message: " << clientMsg << std::endl;
-    logfile << "Server response: " << conn->wbuf + 4 << std::endl;
-    logfile << std::endl;
-    logfile.flush();
-}
-
 
 // Error handling function, prints error message and exits
 void Server::die(const char *msg) {
@@ -189,13 +145,13 @@ void Server::connPut(std::vector<Conn*> &fd2conn, struct Conn *conn) {
 
 std::mutex Server::accept_mutex;
 
-int32_t Server::acceptNewConn(std::vector<Conn*> &fd2conn, int fd, int kq) {
+int32_t Server::acceptNewConn(std::vector<Conn*> &fd2conn, int fd) {
     struct sockaddr_in client_addr = {};
     socklen_t socklen = sizeof(client_addr);
     std::lock_guard<std::mutex> guard(accept_mutex);
     int connfd = accept(fd, (struct sockaddr *)&client_addr, &socklen);
     if (connfd < 0) {
-        std::cerr << "accept() failed with errno " << errno << " (" << strerror(errno) << ")" << std::endl;
+        // std::cerr << "accept() failed with errno " << errno << " (" << strerror(errno) << ")" << std::endl;
         msg("accept() error");
         return -1;
     }
@@ -211,12 +167,6 @@ int32_t Server::acceptNewConn(std::vector<Conn*> &fd2conn, int fd, int kq) {
     conn->wbuf_size = 0;
     conn->wbuf_sent = 0;
     connPut(fd2conn, conn);
-
-    struct kevent changeList[2];
-    EV_SET(&changeList[0], connfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-    EV_SET(&changeList[1], connfd, EVFILT_WRITE, EV_ADD, 0, 0, NULL);
-    kevent(kq, changeList, 2, NULL, 0, NULL);
-
     return 0;
 }
 
@@ -238,15 +188,17 @@ bool Server::tryOneRequest(Conn *conn) {
     memcpy(&conn->wbuf[0], &len, 4);
     memcpy(&conn->wbuf[4], &conn->rbuf[4], len);
     conn->wbuf_size = 4 + len;
-    conn->rbuf_size -= (4 + len);
+
+    size_t rem = conn->rbuf_size - (4 + len);
+    if (rem) {
+        memmove(conn->rbuf, &conn->rbuf[4 + len], rem);
+    }
+    conn->rbuf_size = rem;
     stateResponse(conn);
     return (conn->state == STATE_REQ);
 }
 
 bool Server::tryFillRbuf(Conn *conn) {
-    if (conn->rbuf_size > 0) {
-        memmove(conn->rbuf, &conn->rbuf[conn->rbuf_size], conn->rbuf_size);
-    }
     assert(conn->rbuf_size < sizeof(conn->rbuf));
     ssize_t rv = 0;
     do {
