@@ -6,12 +6,12 @@ GTEST_FLAGS = -lgtest -lgtest_main -pthread
 # Object files
 CLIENT_OBJS = Client.o
 SERVER_OBJS = Server.o
-TEST_OBJS = test.o
+TEST_OBJS = tests.o
 
 # Executables
 CLIENT_EXE = client
 SERVER_EXE = server
-TEST_EXE = test
+TEST_EXE = tests
 
 .PHONY: all clean test
 
@@ -39,3 +39,8 @@ main_server.o: main_server.cpp
 
 clean:
 	rm -f $(CLIENT_EXE) $(SERVER_EXE) $(TEST_EXE) *.o
+	rm server.log
+
+clean_test:
+	rm -f $(CLIENT_EXE) $(SERVER_EXE) $(TEST_EXE) *.o
+	rm test.out && rm server.log

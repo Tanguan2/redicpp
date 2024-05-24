@@ -87,20 +87,6 @@ void Server::die(const char *msg) {
     abort();
 }
 
-// Handle a client connection, read and write data
-void Server::handleConnection(int connfd) {
-    char rbuf[64] = {};
-    ssize_t n = read(connfd, rbuf, sizeof(rbuf) - 1);
-    if (n < 0) {
-        msg("read() error"); // Handle read error
-        return;
-    }
-    printf("client says: %s\n", rbuf);
-
-    char wbuf[] = "world";
-    write(connfd, wbuf, strlen(wbuf));
-}
-
 // Print a message to stderr
 void Server::msg(const char *msg) {
     fprintf(stderr, "%s\n", msg);
@@ -134,47 +120,6 @@ int32_t Server::write_all(int fd, const char *buf, size_t n) {
 
 // Maximum message length
 const size_t maxMsgLen = 4096;
-
-// Handle a single client request
-int32_t Server::oneRequest(int connfd) {
-    // Read the request header (4 bytes)
-    char rbuf[4 + maxMsgLen + 1];
-    errno = 0;
-    int32_t err = read_full(connfd, rbuf, 4);
-    if (err) {
-        if (errno == 0) {
-            msg("EOF"); // Handle EOF
-        } else {
-            msg("read() error"); // Handle read error
-        }
-        return err;
-    }
-    uint32_t len = 0;
-    memcpy(&len, rbuf, 4); // Assume little endian
-    if (len > maxMsgLen) {
-        msg("message too long"); // Handle message length error
-        return -1;
-    }
-
-    // Read the request body
-    err = read_full(connfd, &rbuf[4], len);
-    if (err) {
-        msg("read() error"); // Handle read error
-        return err;
-    }
-    
-    // Print the client
-        // Null-terminate the received data
-    rbuf[4 + len] = '\0';
-    std::cout << "client says: " << &rbuf[4] << std::endl;
-    // REPLY
-    const char reply[] = "world";
-    char wbuf[4 + sizeof(reply)];
-    len = (uint32_t)strlen(reply);
-    memcpy(wbuf, &len, 4); // assume little endian
-    memcpy(&wbuf[4], reply, len);
-    return write_all(connfd, wbuf, 4 + len);
-}
 
 void Server::fd_set_nb(int fd) {
     errno = 0;

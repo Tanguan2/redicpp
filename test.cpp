@@ -1,5 +1,3 @@
-#include <iostream>
-#include <thread>
 #include "Client.h"
 #include "Server.h"
 #include <gtest/gtest.h>
@@ -89,9 +87,6 @@ TEST_F(ClientServerTest, InvalidMessageLength) {
     int32_t result = client.sendRequest(client.getFd(), long_message.c_str());
     EXPECT_NE(result, 0) << "Server should reject messages longer than maxMsgLen";
 }
-
-
-
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);

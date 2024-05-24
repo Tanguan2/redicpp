@@ -1,18 +1,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <cstddef> // for size_t
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netinet/ip.h>
-#include <iostream>
-#include <cassert>
+#include "Dependencies.h"
 
 class Client {
 public:
