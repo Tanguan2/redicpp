@@ -1,2 +1,3 @@
 # Ignore googletest folder
 /build/googletest/
+/.vscode/

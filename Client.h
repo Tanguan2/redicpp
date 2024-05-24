@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <iostream>
+#include <cassert>
 
 class Client {
 public:
